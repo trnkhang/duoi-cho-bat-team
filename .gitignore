@@ -1,0 +1,7 @@
+node_modules/
+webpack-build/
+coverage/
+.env.local
+.npmrc
+*.log
+.DS_Store

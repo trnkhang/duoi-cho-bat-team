@@ -1,0 +1,66 @@
+stages:
+  - valid
+  - install_dependencies
+  - quality
+  - build
+  - sync_resource
+  - create_release
+
+variables:
+  DEVELOP_BRANCH: "dev"
+  STAGING_BRANCH: "staging-v2"
+  PRODUCTION_BRANCH: "production-v2"
+  ZTOOL_SHELL_RUNNER_TAG: "ztool-shell-runner"
+
+default:
+  tags:
+    - "$ZTOOL_SHELL_RUNNER_TAG"
+
+.miniapp_rules:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_BRANCH == $DEVELOP_BRANCH || $CI_COMMIT_BRANCH == $STAGING_BRANCH || $CI_COMMIT_BRANCH == $PRODUCTION_BRANCH)'
+
+check-version:
+  extends: .miniapp_rules
+  stage: valid
+  script:
+    - sh scripts/check-version-exist.sh
+
+install-dependencies:
+  extends: .miniapp_rules
+  stage: install_dependencies
+  script:
+    - test -n "$VERDACCIO_ZTOOL_TOKEN"
+    - npm config set registry "https://repo.zalopay.vn/verdaccio/"
+    - npm config set "//repo.zalopay.vn/verdaccio/:_authToken" "$VERDACCIO_ZTOOL_TOKEN"
+    - npm ci
+
+quality:
+  extends: .miniapp_rules
+  stage: quality
+  script:
+    - npm run lint
+    - npm run test:unit
+
+build:
+  extends: .miniapp_rules
+  stage: build
+  script:
+    - sh scripts/build-resource.sh
+  artifacts:
+    paths:
+      - webpack-build/
+
+sync-resource:
+  extends: .miniapp_rules
+  stage: sync_resource
+  needs: [build]
+  script:
+    - CONFIRM_DEPLOY=YES sh scripts/sync-resource.sh
+
+create-release:
+  extends: .miniapp_rules
+  stage: create_release
+  needs: [sync-resource]
+  script:
+    - CONFIRM_DEPLOY=YES sh scripts/create-release.sh

@@ -1,0 +1,45 @@
+{
+  "name": "@zpi/duoi-cho-bat-team",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "zlpMiniapp": {
+    "styling": "scss-modules"
+  },
+  "scripts": {
+    "ma-start": "micro-app-scripts start",
+    "wp-build": "micro-app-scripts build",
+    "test": "micro-app-scripts test",
+    "test:unit": "micro-app-scripts test --watchAll=false",
+    "lint": "eslint -c .eslintrc.js --ext .ts,.tsx .",
+    "lint:fix": "npm run lint -- --fix",
+    "version-dev": "npm version prerelease --preid=alpha --no-git-tag-version",
+    "version-stg": "npm version prerelease --preid=beta --no-git-tag-version"
+  },
+  "browserslist": [
+    "Android >= 5",
+    "IOS >= 9.3",
+    "Edge >= 15",
+    "Safari >= 9.1",
+    "Chrome >= 49",
+    "Firefox >= 31",
+    "Samsung >= 5"
+  ],
+  "dependencies": {
+    "@zpi/federation-adapter": "0.1.1",
+    "@zpi/looknfeel": "1.2.1",
+    "@zpi/single-spa-react": "2.1.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "5.3.3"
+  },
+  "devDependencies": {
+    "@types/jest": "27.4.1",
+    "@types/react": "18.3.9",
+    "@types/react-dom": "18.3.0",
+    "@types/react-router-dom": "5.3.3",
+    "@zpi/micro-app-cli": "1.0.6",
+    "eslint": "^8.57.0",
+    "sass": "1.77.8",
+    "typescript": "4.2.2"
+  }
+}

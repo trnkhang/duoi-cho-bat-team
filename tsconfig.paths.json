@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@application/*": ["application/*"],
+      "@dataSource/*": ["dataSource/*"],
+      "@presentation/*": ["presentation/*"],
+      "@share/*": ["share/*"]
+    }
+  }
+}

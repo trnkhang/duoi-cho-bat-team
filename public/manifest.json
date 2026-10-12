@@ -1,0 +1,8 @@
+{
+  "short_name": "duoi-cho-bat-team",
+  "name": "duoi-cho-bat-team",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0033C9",
+  "background_color": "#FFFFFF"
+}
