@@ -122,6 +122,7 @@
   .deskQ{font:800 13px/1 var(--font-head);text-anchor:middle;opacity:.55}
   .deskName{font:700 8px/1.05 var(--font-body);text-anchor:middle;letter-spacing:.1px}
   .ctxLabel{font:800 10px/1 var(--font-head);letter-spacing:.4px;opacity:.85}
+  .teamTag{font:800 10px/1 var(--font-head);text-anchor:middle;pointer-events:none}
   .facLabel{font:700 9px/1 var(--font-head);letter-spacing:.5px}
   .numTag{font:800 9px/1 var(--font-head)}
   /* Isometric city pins */
@@ -277,7 +278,7 @@
       <div class="stat"><div class="k">ĐÃ BẮT ĐƯỢC</div><div class="v"><span id="found">0</span><small>/ <span id="total">0</span></small></div></div>
       <div class="stat"><div class="k">CHUỖI ĐÚNG</div><div class="v" id="streak">0🔥</div></div>
     </div>
-    <div class="reward-track" id="rewardTrack"><span>🎁 Đúng 10 team nhận thưởng</span><b id="rewardProg">0/10</b></div>
+    <div class="reward-track" id="rewardTrack"><span>🎁 Mỗi 2 team đúng nhận passcode</span><b id="rewardProg">0/2</b></div>
     <button class="btn btn-ghost btn-block" id="resetBtn" style="margin-top:11px">🔁 Chơi lượt mới</button>
   </header>
 
@@ -353,7 +354,7 @@
           <div class="rule"><span class="n g">2</span><p>Đoán đó là <b>team nào</b> trong 4 đáp án theo vị trí trên sơ đồ.</p></div>
           <div class="rule"><span class="n o">3</span><p>Bí quá? Dùng tối đa <b>2 gợi ý</b> (chức năng team / loại bớt đáp án) — điểm sẽ giảm.</p></div>
           <div class="rule"><span class="n p">4</span><p>Đoán xong, xem team thuộc <b>phòng ban</b> nào và <b>chức năng</b>.</p></div>
-          <div class="rule"><span class="n" style="background:var(--zlp-red)">🎁</span><p>Đoán <b>đúng 10 team</b> là nhận ngay <b>phần thưởng</b> từ Zalopay Tech!</p></div>
+          <div class="rule"><span class="n" style="background:var(--zlp-red)">🎁</span><p>Cứ đoán <b>đúng 2 team</b> là nhận ngay <b>1 passcode</b> từ Zalopay Tech!</p></div>
         </div>
         <button class="btn btn-primary btn-block" id="startBtn">Bắt đầu chơi 🎮</button>
       </div>
@@ -395,12 +396,13 @@
           <path d="M60 42c7-15 28-11 21 2-4 7-15 4-21-2Z" fill="#e3173c"/>
         </svg>
         <h1>Phần thưởng! 🎁</h1>
-        <p class="lead-sub">Bạn đã đoán đúng <b>10 team</b> của Zone B — quá giỏi!</p>
+        <p class="lead-sub">Bạn đã đoán đúng <b id="rewardCount">2 team</b> của Zone B.</p>
       </div>
       <div class="oc-body">
         <div class="leadcard" style="padding:20px 18px;text-align:center">
           <div style="font-size:40px;line-height:1;margin:2px 0 8px">🔑</div>
           <p class="lead-name" style="font-size:18px">Đủ điều kiện nhận passcode!</p>
+          <p id="rewardNth" style="margin:6px 0 0;font-size:13px;color:#51607a"></p>
         </div>
         <button class="btn btn-primary btn-block" id="rewardContinue" style="margin-top:18px">Tiếp tục chơi →</button>
         <button class="btn btn-ghost btn-block" id="rewardReset" style="margin-top:10px">Chơi lượt mới 🔁</button>
@@ -502,10 +504,9 @@ BLOCKS.forEach(b=>{
     }));
     return;
   }
-  let row=0;b.areas.forEach(a=>{
-    for(let i=0;i<a.count;i++){const col=i%b.cols, r=row+Math.floor(i/b.cols);
+  let k=0;b.areas.forEach(a=>{                            // xếp nối tiếp, không để trống ô giữa các phòng ban
+    for(let i=0;i<a.count;i++,k++){const col=k%b.cols, r=Math.floor(k/b.cols);
       SEATS.push({fx:b.fx0+col, fy:b.fy0+r, code:a.code, kind:a.kind, team:null});}
-    row+=Math.ceil(a.count/b.cols);
   });
 });
 
@@ -536,19 +537,20 @@ function initialsAvatar(d){const txt=d.ink==='#ffffff'?'#ffffff':'#243654';
   return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);}
 
 /* ============ State ============ */
-const REWARD_AT=10;   // số câu đúng để nhận phần thưởng
-const S={score:0,found:new Set(),streak:0,bestStreak:0,attempts:0,correct:0,current:null,hintsUsed:0,answered:false,rewarded:false,pendingReward:false};
+const REWARD_AT=2;    // cứ mỗi REWARD_AT câu đúng là nhận 1 passcode
+const S={score:0,found:new Set(),streak:0,bestStreak:0,attempts:0,correct:0,current:null,hintsUsed:0,answered:false,rewards:0,pendingReward:false};
 
 /* Persist progress per screen so each screen keeps its round going.
    Pressing "Bắt đầu" only resumes — it never resets. Only "Chơi lại" clears. */
 const SAVE_KEY='dcbt_progress_v1';
 function saveProgress(){
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify({score:S.score,found:[...S.found],streak:S.streak,bestStreak:S.bestStreak,attempts:S.attempts,correct:S.correct,rewarded:S.rewarded}));}catch(e){}
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify({score:S.score,found:[...S.found],streak:S.streak,bestStreak:S.bestStreak,attempts:S.attempts,correct:S.correct,rewards:S.rewards}));}catch(e){}
 }
 function loadProgress(){
   try{const r=localStorage.getItem(SAVE_KEY);if(!r)return;const d=JSON.parse(r);
     S.score=d.score||0;S.found=new Set(d.found||[]);S.streak=d.streak||0;
-    S.bestStreak=d.bestStreak||0;S.attempts=d.attempts||0;S.correct=d.correct||0;S.rewarded=!!d.rewarded;}catch(e){}
+    S.bestStreak=d.bestStreak||0;S.attempts=d.attempts||0;S.correct=d.correct||0;
+    S.rewards=Number.isInteger(d.rewards)?d.rewards:Math.floor(S.correct/REWARD_AT);}catch(e){}
 }
 function clearProgress(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}}
 
@@ -639,21 +641,21 @@ function drawBadge(t){
 }
 /* Context-area codes (ZOP, OPCS, UXUI …) floated above their seats. */
 function drawCtxLabels(){
-  BLOCKS.forEach(b=>{let row=0;(b.areas||[]).forEach(a=>{
+  BLOCKS.forEach(b=>{let k0=0;(b.areas||[]).forEach(a=>{
     if(a.kind==='ctx'){
-      let mx=0,my=0;for(let i=0;i<a.count;i++){const col=i%b.cols,r=row+Math.floor(i/b.cols);const p=iso(b.fx0+col,b.fy0+r);mx+=p.x;my+=p.y+SHH;}
+      let mx=0,my=0;for(let i=0;i<a.count;i++){const col=(k0+i)%b.cols,r=Math.floor((k0+i)/b.cols);const p=iso(b.fx0+col,b.fy0+r);mx+=p.x;my+=p.y+SHH;}
       mx/=a.count;my/=a.count;
       const g=el('g');
       const halo=el('text',{class:'ctxLabel',x:mx,y:my+3,'text-anchor':'middle',stroke:'#fff','stroke-width':3.2,fill:'#fff',opacity:.85});halo.textContent=a.code;
       const t=el('text',{class:'ctxLabel',x:mx,y:my+3,'text-anchor':'middle',fill:CTX[a.code].ink});t.textContent=a.code;
       g.appendChild(halo);g.appendChild(t);map.appendChild(g);
     }
-    row+=Math.ceil(a.count/b.cols);
+    k0+=a.count;
   });});
 }
 /* Seat-count tag printed at the foot of each block. */
 function drawNumTag(b){
-  const rows=b.areas.reduce((s,a)=>s+Math.ceil(a.count/b.cols),0);
+  const rows=Math.ceil(b.areas.reduce((s,a)=>s+a.count,0)/b.cols);
   const p=iso(b.fx0+b.cols/2, b.fy0+rows+0.7);
   const g=el('g',{class:'numtag'});
   g.appendChild(el('rect',{x:p.x-15,y:p.y-9,width:30,height:17,rx:5,fill:'#ffffff',stroke:'#cdd9ec','stroke-width':1}));
@@ -721,9 +723,10 @@ function openQuiz(t){
   $('#revealDomain').classList.remove('on');
   $('#hintCount').textContent='(còn 2)';$('#hintBtn').disabled=false;
   const others=TEAMS.filter(x=>x.id!==t.id);
-  const sib=shuffle(others.filter(x=>x.dept.id===d.id));   // ưu tiên team cùng phòng ban làm nhiễu
-  const rest=shuffle(others.filter(x=>x.dept.id!==d.id));
-  const opts=shuffle([t,...[...sib,...rest].slice(0,3)]);
+  // chỉ đáp án đúng thuộc phòng ban này; 3 đáp án nhiễu lấy từ 3 phòng ban khác nhau
+  const pool=shuffle(others.filter(x=>x.dept.id!==d.id)), used=new Set(), wrong=[];
+  for(const x of pool){if(wrong.length===3)break;if(used.has(x.dept.id))continue;used.add(x.dept.id);wrong.push(x);}
+  const opts=shuffle([t,...wrong]);
   const box=$('#opts');box.innerHTML='';
   opts.forEach((x,i)=>{const b=document.createElement('button');b.className='opt';b.dataset.id=x.id;
     b.innerHTML=`<span class="ab">${'ABCD'[i]}</span><span>${x.name}</span>`;
@@ -749,7 +752,7 @@ function answer(picked,btn){
     [...$('#opts').children].forEach(b=>b.disabled=true);
     const pts=pointsFor(S.hintsUsed);
     S.score+=pts;S.correct++;S.streak++;S.bestStreak=Math.max(S.bestStreak,S.streak);S.found.add(S.current.id);
-    if(S.correct>=REWARD_AT&&!S.rewarded){S.rewarded=true;S.pendingReward=true;}
+    if(Math.floor(S.correct/REWARD_AT)>S.rewards){S.rewards++;S.pendingReward=true;}   // mỗi 2 team đúng → 1 passcode
     setTimeout(()=>openResult(S.current,pts),640);
   }else{
     S.streak=0;btn.classList.add('wrong');btn.disabled=true;
@@ -783,7 +786,16 @@ function markFound(t){
   });
   const dg=map.querySelector(`.desk[data-team="${t.id}"]`);if(!dg)return;
   const ring=dg.querySelector('.ring');if(ring)ring.classList.remove('on');
-  const lab=dg.querySelector('[data-lab]');if(lab){lab.textContent='✓';lab.setAttribute('fill','#00a152');}
+  // thay "?" bằng nhãn tên team
+  if(dg.querySelector('.teamTag'))return;
+  const {cx,cy}=t._desk;
+  [...dg.children].forEach(n=>n.style.display='none');
+  const txt=el('text',{class:'teamTag',x:cx,y:cy+3.5,fill:shade(col,-45)});txt.textContent=t.name;
+  const w=t.name.length*6.2+14;
+  dg.appendChild(el('rect',{class:'teamTag',x:cx-w/2,y:cy-8,width:w,height:16,rx:8,fill:'#ffffff',stroke:col,'stroke-width':1.5,opacity:.96}));
+  dg.appendChild(txt);
+  try{const bw=txt.getComputedTextLength();if(bw){const r=dg.lastChild.previousSibling;const w2=bw+14;r.setAttribute('x',cx-w2/2);r.setAttribute('width',w2);}}catch(e){}
+  map.insertBefore(dg,map.querySelector('#runner'));   // nhãn nổi trên các ô ghế, dưới Toro
 }
 $('#continueBtn').addEventListener('click',()=>{hideSheets();
   if(S.pendingReward){S.pendingReward=false;setTimeout(showReward,320);return;}
@@ -820,8 +832,8 @@ document.querySelector('.stage').addEventListener('click',(e)=>{
 
 /* ============ Stats / summary ============ */
 function refreshStats(){$('#score').textContent=S.score;$('#found').textContent=S.found.size;$('#streak').textContent=S.streak+'🔥';
-  $('#rewardProg').textContent=Math.min(S.correct,REWARD_AT)+'/'+REWARD_AT;
-  $('#rewardTrack').classList.toggle('done',S.correct>=REWARD_AT);}
+  $('#rewardProg').textContent=(S.correct%REWARD_AT)+'/'+REWARD_AT;
+  $('#rewardTrack').classList.toggle('done',S.rewards>0);}
 function showSummary(){
   $('#sumScore').textContent=S.score;$('#sumFound').textContent=S.found.size+'/'+TEAMS.length;
   $('#sumAcc').textContent=(S.attempts?Math.round(S.correct/S.attempts*100):0)+'%';$('#sumStreak').textContent=S.bestStreak;
@@ -830,11 +842,14 @@ function showSummary(){
   $('#sumSub').textContent=perfect?'Bạn thuộc lòng sơ đồ Zone B rồi!':'Bạn đã bắt được toàn bộ team của Zone B!';
   $('#summary').classList.add('on');burstConfetti(80);
 }
-function showReward(){$('#reward').classList.add('on');burstConfetti(100);}
+function showReward(){
+  $('#rewardCount').textContent=(S.rewards*REWARD_AT)+' team';
+  $('#rewardNth').textContent=S.rewards>1?'Passcode thứ '+S.rewards:'';
+  $('#reward').classList.add('on');burstConfetti(100);}
 
 /* Full reset so the next player starts a clean round on the same device. */
 function resetGame(reshowIntro){
-  S.score=0;S.found=new Set();S.streak=0;S.bestStreak=0;S.attempts=0;S.correct=0;S.rewarded=false;S.pendingReward=false;S.answered=false;
+  S.score=0;S.found=new Set();S.streak=0;S.bestStreak=0;S.attempts=0;S.correct=0;S.rewards=0;S.pendingReward=false;S.answered=false;
   clearProgress();hideSheets();
   $('#summary').classList.remove('on');$('#reward').classList.remove('on');
   buildMap();refreshStats();
@@ -844,8 +859,8 @@ function resetGame(reshowIntro){
 $('#replayBtn').addEventListener('click',()=>resetGame(false));
 $('#resetBtn').addEventListener('click',()=>{if(confirm('Bắt đầu lượt chơi mới?\nĐiểm và tiến trình hiện tại sẽ bị xoá.'))resetGame(true);});
 $('#rewardReset').addEventListener('click',()=>resetGame(false));
-// Đã đủ 10 team → bấm vào thanh thưởng để mở lại popup nhận passcode
-$('#rewardTrack').addEventListener('click',()=>{if(S.correct>=REWARD_AT)showReward();});
+// Đã nhận passcode → bấm vào thanh thưởng để mở lại popup nhận passcode
+$('#rewardTrack').addEventListener('click',()=>{if(S.rewards>0)showReward();});
 // Bấm ra ngoài thẻ (vùng nền mờ) để đóng popup passcode
 $('#reward').addEventListener('click',e=>{if(!e.target.closest('.ocard'))$('#rewardContinue').click();});
 $('#rewardContinue').addEventListener('click',()=>{$('#reward').classList.remove('on');
